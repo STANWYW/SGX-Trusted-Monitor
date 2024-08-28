@@ -1,0 +1,16 @@
+make: 'test/simple-remote-attest-challenger' is up to date.
+TCS address	: 4fffd000
+Pre-allocated EPC SSA region	: 0x2000
+Pre-allocated EPC Heap region	: 0x12c000
+Later-Augmented EPC Heap region	: 0x0
+Total EPC Heap region	: 0x12c000
+Connecting to Target enclave ...
+Target enclave connected!
+Sending challenge to Target enclave ...
+Waiting for RSA key and QUOTE ...
+Received rsa_N from Target enclave
+Received rsa_E from Target enclave
+Received QUOTE from Target enclave
+Verify Success!
+Remote Attestation Success!
+Waiting for a message from Target...

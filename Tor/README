@@ -1,0 +1,24 @@
+0.Prerequisite
+$ apt-get install libevent-dev 
+
+1. compile & install Tor
+
+$ cd tor-0.2.5.10
+$ ./configure --disable-asciidoc
+$ make
+$ make install
+
+2. Configurating Chutney
+
+$ cd chutney
+$ ./chutney configure networks/basic
+$ ./chutney start network/basic
+
+===========================================
+
+[Remaining works]
+
+1. Enclave_Tor with argc, argv
+2. Get warnings
+3. Manual and script for executing enclave_process
+4. Manual and script for executing chutney (Tor-non-enclave)

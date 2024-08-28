@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resource Monitoring</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        label {
+            display: block;
+            margin-bottom: 10px;
+        }
+        input[type="text"] {
+            padding: 10px;
+            width: 300px;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 15px;
+            margin-right: 10px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .btn-delete {
+            background-color: #FF0000;
+            color: white;
+        }
+        .btn-delete:hover {
+            background-color: #cc0000;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: white;
+            border: 1px solid #ddd;
+        }
+        pre {
+            background-color: #eee;
+            padding: 10px;
+        }
+        #log {
+            background-color: #fff;
+            color: #000;
+            padding: 10px;
+            height: 300px;
+            overflow-y: scroll;
+            border: 1px solid #ddd;
+            margin-top: 20px;
+        }
+        #logOutput {
+            color: #000;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>资源监控平台</h1>
+
+    <label for="ipInput">输入被监控端的IP地址:</label>
+    <input type="text" id="ipInput" placeholder="例如 172.19.0.3">
+
+    <div>
+        <button onclick="getCurrentUsage()">查询当前资源使用情况</button>
+        <button onclick="getHistoricalUsage()">查询历史资源情况</button>
+        <button class="btn-delete" onclick="clearHistory()">清空历史记录</button>
+    </div>
+
+    <div id="result">
+        <h2>查询结果</h2>
+        <pre id="output"></pre>
+    </div>
+
+    <div id="log">
+        <h2>实时日志</h2>
+        <pre id="logOutput"></pre>
+    </div>
+
+    <script>
+        let logInterval;
+
+        // 查询当前资源使用情况
+        function getCurrentUsage() {
+            const ip = document.getElementById('ipInput').value;
+            if (ip) {
+                fetch(`/api/resource-usage/current?ip=${ip}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const output = `
+                        时间: ${data.time}\n
+                        CPU使用率: ${data.cpu_usage}%\n
+                        内存使用率: ${data.memory_usage}%
+                        `;
+                        document.getElementById('output').textContent = output;
+                    })
+                    .catch(error => console.error('Error:', error));
+
+                // 开始轮询日志
+                clearInterval(logInterval);
+                logInterval = setInterval(fetchLogs, 1000);
+            } else {
+                alert('请输入有效的 IP 地址');
+            }
+        }
+
+        // 查询历史资源使用情况
+        function getHistoricalUsage() {
+            const ip = document.getElementById('ipInput').value;
+            if (ip) {
+                fetch(`/api/resource-usage/history?ip=${ip}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        let output = '';
+                        data.forEach(record => {
+                            output += `
+                            时间: ${record.time}\n
+                            CPU使用率: ${record.cpu_usage}%\n
+                            内存使用率: ${record.memory_usage}%\n\n
+                            `;
+                        });
+                        document.getElementById('output').textContent = output;
+                    })
+                    .catch(error => console.error('Error:', error));
+            } else {
+                alert('请输入有效的 IP 地址');
+            }
+        }
+
+        // 清空当前 IP 的历史资源记录
+        function clearHistory() {
+            const ip = document.getElementById('ipInput').value;
+            if (ip) {
+                if (confirm(`确定要清空 IP ${ip} 的所有历史记录吗？`)) {
+                    fetch(`/api/resource-usage/clear?ip=${ip}`, { method: 'DELETE' })
+                        .then(response => {
+                            if (response.ok) {
+                                alert('历史记录已清空');
+                                document.getElementById('output').textContent = ''; // 清空显示区域
+                            } else {
+                                alert('清空历史记录失败');
+                            }
+                        })
+                        .catch(error => console.error('Error:', error));
+                }
+            } else {
+                alert('请输入有效的 IP 地址');
+            }
+        }
+
+        // 获取日志数据
+        function fetchLogs() {
+            fetch('/api/resource-usage/logs')
+                .then(response => response.text())
+                .then(data => {
+                    const logOutput = document.getElementById('logOutput');
+                    logOutput.textContent = data;
+                    logOutput.scrollTop = logOutput.scrollHeight;  // 自动滚动到底部
+                })
+                .catch(error => console.error('Error fetching logs:', error));
+        }
+    </script>
+</body>
+</html>

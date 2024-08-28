@@ -1,0 +1,38 @@
+# Jaebaek Seo --- Jan 2015
+#
+# Run the program with "make run".
+
+OPENSGXDIR = @LIBSGXDIR@/..
+LIBSGXDIR = @LIBSGXDIR@
+
+CFLAGS = -g -Wall -pedantic -Wno-unused-function -std=gnu11	\
+         -fno-stack-protector -static -fvisibility=hidden	\
+         -I$(LIBSGXDIR)/musl-libc/include -I$(LIBSGXDIR)/include
+
+LDFLAGS = -static -nostdlib -nostartfiles				\
+-Wl,-T,$(LIBSGXDIR)/../user/sgx.lds -L$(LIBSGXDIR)
+
+LDLIBS = $(LIBSGXDIR)/sgx-entry.o $(LIBSGXDIR)/libsgx.a	\
+         $(LIBSGXDIR)/libc-sgx.a $(LIBSGXDIR)/libpolarssl-sgx.a
+
+all:	malloc_test.conf
+
+malloc_test.conf: malloc_test.sgx sign.key
+	$(OPENSGXDIR)/opensgx --sign malloc_test.sgx --key sign.key
+
+sign.key:
+	$(OPENSGXDIR)/opensgx --key
+
+malloc_test.sgx:	malloc_test.o $(LDLIBS)
+	$(CC) $(LDFLAGS) $< -o $@ $(LDLIBS)
+
+malloc_test.o: malloc_test.c
+	$(CC) -c $(CFLAGS) -o $@ $<
+
+run:	all
+	A=`pwd`; cd $(OPENSGXDIR); ./opensgx $$A/malloc_test.sgx $$A/malloc_test.conf
+
+clean:
+	rm -f malloc_test.o malloc_test.sgx malloc_test.conf sign.key
+
+.PHONY:	all run clean

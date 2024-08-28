@@ -1,0 +1,97 @@
+OPENSGX USER-LEVEL DESIGN
+
+# Start-up process
+
+a. Init : Reserve memory for EPC pages
+          QEMU init
+          Stack init
+
+b. Create Launch Enclave : syscall_create_enclave()
+   0. Enclave measurements
+      - Perform the same steps as step 1 - 3.
+      - Compute the measurements (enclave identiy).
+      - Clear the allocated epc pages.
+
+   1. ECREATE (in alloc_secs)
+      - allocate secs
+      - set secs (base addr, enclave size)
+        Note: base addr is equal to the secs addr by design.
+      - set secinfo
+      - set pageinfo
+      - call ECREATE
+
+   2. Add TCS Page
+      - set up tcs.
+      - Use EADD to add the page.
+
+   3. Add REG Pages
+      - Add REG pages with entry point provided.
+      - Use EADD to add pages.
+
+   4. Add stack frames
+      - Add stack frames (REG pages)
+      - Use EADD to add pages. (allocate epc pages)
+
+c. Current settings
+   - Total epc size:
+   - Default enclave size:
+   - Total stack size:
+   - Stack per thread size:
+
+d. ECP Memory layout
+   - Consider the case of adding one enclave.
+
+   =========================================
+                  EPC Addr Begin
+   =========================================
+   Launch Enclave   SECS Page(s)
+                    TCS Page(s)
+                    REG Page(s)
+                    Stack Frames
+   =========================================
+   Enclave 1        SECS Page(s)
+                    TCS Page(s)
+                    REG Page(s)
+                    Stack Frames
+   =========================================
+                    Free EPC Pages
+   =========================================
+                  EPC Addr End
+   =========================================
+
+
+e. Enclave design
+   - Enclave size:        secs->size
+   - Baseaddr:            secs->baseaddr
+   - Measurement:         secs->mrEnclave
+   - Signature:           secs->mrSigner
+   - Control entry point: tcs->oentry (relative to baseaddr)
+   - SSA Offet:           tcs->ossa (relative to baseaddr)
+   - FS section:          tcs->ofsbasgx ~ tcs->obsbasgx + tcs->fslimit (relative to baseaddr)
+   - GS section:          tcs->ogsbasgx ~ tcs->ogsbasgx + tcs->gslimit (relative to baseaddr)
+
+f. Security features
+   - Enclave signature: sigstruct.signature == secs.mrsigner
+     - Signature generated from sigstruct
+       - Signed field: HEADER, VENDOR, DATE, HEADER2, SWDEFINFO,
+                       RESERVED, MISCSELECT*, MISCMASK*, RESERVED2,
+                       ATTRIBUTE, ATTRIBUTEMASK, ENCLAVEHASH, RESERVED3,
+                       ISVPROID, ISVSVN
+   - Enclave measurement: sigstruct.enclavehash == secs.mrenclave
+     - Before execute EINIT, EEXTEND is used to measure enclave and update the
+       sec.mrenclave vaule.
+
+g. Customized ssl library
+   - Based on openssl
+   - Changing standard library calls into sgx ABI calls to put and run them inside the enclave
+   - Library repackaging
+     $ cd user/openssl
+     $ ./config no-comp no-asm no-shared no-hw no-engines no-threads no-dso
+     $ make
+   - After get libcrypto.a (customized openssl for sgx), compile and use ssl library functions
+     (See tp/README or tor/README)
+
+h. local attestation
+   - Based on polarssl (modified polarssl, user/polarssl_sgx)
+   - Changing standard library calls into sgx ABI calls to put and run them inside the enclave
+   - For execution, see test/simple-challenger, test/simple-quotingEnclave, and test/simple-targetEnclave.
